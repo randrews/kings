@@ -1,18 +1,44 @@
+function draw_game(game)
+    draw_board(game.board)
+    draw_hand(game.hand)
+end
+
+function draw_hand(hand)
+    love.graphics.push()
+
+    local dims = card_dimensions()
+    love.graphics.translate(dims.status_left, 0)
+
+    for n=1, 4 do
+        local cx, cy, cw, ch = card_coords(n-1, 4)
+        love.graphics.push()
+        love.graphics.translate((n-1)*(cw+dims.spacing), cy)
+        draw_card(hand[n])
+        love.graphics.pop()
+    end
+
+    love.graphics.pop()
+end
+
 function draw_board(board)
+    local dims = card_dimensions()
     for y = 0, 8 do
         for x = 0, 11 do
-            draw_card(board[y][x], x, y)
+            local cx, cy, cw, ch = card_coords(x, y)
+            love.graphics.push()
+            love.graphics.translate(cx, cy)
+            draw_card(board[y][x])
+            love.graphics.pop()
         end
     end
 end
 
-function draw_card(card, x, y)
+function draw_card(card)
     local dims = card_dimensions()
-    local cx, cy, cw, ch = card_coords(x, y)
 
     if card == nil then
         love.graphics.setColor(200, 200, 0)
-        love.graphics.rectangle('line', cx, cy, cw, ch, 3, 3)
+        love.graphics.rectangle('line', 0, 0, dims.width, dims.height, 3, 3)
     else
         local suit = card:sub(1,1)
         local rank = card:sub(2,3)
@@ -31,7 +57,7 @@ function draw_card(card, x, y)
         end
 
         love.graphics.setColor(255, 255, 255)
-        love.graphics.draw(CardsPng, quad, cx, cy, 0, dims.scale, dims.scale)
+        love.graphics.draw(CardsPng, quad, 0, 0, 0, dims.scale, dims.scale)
     end
 end
 

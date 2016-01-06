@@ -1,31 +1,66 @@
 function draw_game(game)
     draw_board(game.board, drag_state)
     draw_hand(game.hand, drag_state)
+    draw_drops(game, drag_state)
     draw_drag(game, drag_state)
+end
+
+function draw_drops(game, drag_state)
+    if drag_state.dragging then
+        local drop = closest_drop(game, drag_state)
+        if not drop then return end
+
+        local x,y,w,h = card_coords(drop.x, drop.y)
+        love.graphics.setColor(55,115,76)
+        love.graphics.push()
+        love.graphics.translate(x,y)
+        love.graphics.rectangle('fill', 2, 2, w-4, h-4, 3, 3)
+        love.graphics.pop()
+    end
+end
+
+function closest_drop(game, drag_state)
+    local value = dragged_value(game)
+    local drops = legal_drops(game, value)
+    local dragx, dragy = drag_card_coords(drag_state)
+    local mx, my = love.mouse.getPosition()
+
+    local closest = nil
+    local dist = math.huge
+    for _, drop in ipairs(drops) do
+        local x,y,w,h = card_coords(drop.x, drop.y)
+        if intersect(x,y, w,h, dragx,dragy, w,h) then
+            local curr_dist = distance(mx, my, x+w/2, y+h/2)
+            if curr_dist < dist then
+                curr_dist = dist
+                closest = drop
+            end
+        end
+    end
+
+    return closest
+end
+
+function drag_card_coords(drag_state)
+    local mx, my = love.mouse.getPosition()
+    local dx, dy = mx - drag_state.startx, my - drag_state.starty
+
+    local cx, cy
+    if drag_state.target_card.type == 'hand' then
+        cx, cy = hand_coords(drag_state.target_card.x+1)
+    else
+        cx, cy = card_coords(drag_state.target_card.x, drag_state.target_card.y)
+    end
+
+    return cx+dx, cy+dy
 end
 
 function draw_drag(game, drag_state)
     if drag_state.dragging then
-        local value = nil
-        if drag_state.target_card.type == 'hand' then
-            value = game.hand[drag_state.target_card.x+1]
-        else
-            value = game.board[drag_state.target_card.y][drag_state.target_card.x]
-        end
-
-        local mx, my = love.mouse.getPosition()
-        local dx, dy = mx - drag_state.startx, my - drag_state.starty
-
-        local cx, cy
-
-        if drag_state.target_card.type == 'hand' then
-            cx, cy = hand_coords(drag_state.target_card.x+1)
-        else
-            cx, cy = card_coords(drag_state.target_card.x, drag_state.target_card.y)
-        end
+        local value = dragged_value(game)
 
         love.graphics.push()
-        love.graphics.translate(cx+dx, cy+dy)
+        love.graphics.translate(drag_card_coords(drag_state))
         draw_card(value)
         love.graphics.pop()
     end

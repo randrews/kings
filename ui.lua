@@ -40,3 +40,11 @@ function love.mousereleased(x, y, button)
         end
     end
 end
+
+function dragged_value(game)
+    if drag_state.target_card.type == 'hand' then
+        return game.hand[drag_state.target_card.x+1]
+    else
+        return game.board[drag_state.target_card.y][drag_state.target_card.x]
+    end
+end

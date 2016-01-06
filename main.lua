@@ -1,3 +1,4 @@
+require 'util'
 require 'drawing'
 require 'game'
 require 'ui'

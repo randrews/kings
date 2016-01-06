@@ -67,3 +67,31 @@ function start_game(layout)
 
     return game
 end
+
+function legal_drops(game, card)
+    local function matches(other)
+        if not other then return false end
+        if card:sub(1,1) == other:sub(1,1) then return true end -- same suit
+        if card:sub(2,3) == other:sub(2,3) then return true end -- same value
+        return false
+    end
+
+    local function neighbor_matches(x,y)
+        if x > 0 and matches(game.board[y][x-1]) then return true end
+        if x < 11 and matches(game.board[y][x+1]) then return true end
+        if y > 0 and matches(game.board[y-1][x]) then return true end
+        if y < 8 and matches(game.board[y+1][x]) then return true end
+    end
+
+    local drops = {}
+
+    for y=0,8 do
+        for x=0,11 do
+            if game.board[y][x] == nil and neighbor_matches(x,y) then
+                table.insert(drops, {x=x,y=y})
+            end
+        end
+    end
+
+    return drops
+end

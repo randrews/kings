@@ -67,4 +67,3 @@ function start_game(layout)
 
     return game
 end
-

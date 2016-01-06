@@ -1,19 +1,53 @@
 function draw_game(game)
-    draw_board(game.board)
-    draw_hand(game.hand)
+    draw_board(game.board, drag_state)
+    draw_hand(game.hand, drag_state)
+    draw_drag(game, drag_state)
 end
 
-function draw_hand(hand)
+function draw_drag(game, drag_state)
+    if drag_state.dragging then
+        local value = nil
+        if drag_state.target_card.type == 'hand' then
+            value = game.hand[drag_state.target_card.x+1]
+        else
+            value = game.board[drag_state.target_card.y][drag_state.target_card.x]
+        end
+
+        local mx, my = love.mouse.getPosition()
+        local dx, dy = mx - drag_state.startx, my - drag_state.starty
+
+        local cx, cy
+
+        if drag_state.target_card.type == 'hand' then
+            cx, cy = hand_coords(drag_state.target_card.x+1)
+        else
+            cx, cy = card_coords(drag_state.target_card.x, drag_state.target_card.y)
+        end
+
+        love.graphics.push()
+        love.graphics.translate(cx+dx, cy+dy)
+        draw_card(value)
+        love.graphics.pop()
+    end
+end
+
+function draw_hand(hand, drag_state)
     love.graphics.push()
 
+    local skip = nil
+    if drag_state.dragging == true and drag_state.target_card.type == 'hand' then
+        skip = drag_state.target_card.x + 1
+    end
+
     local dims = card_dimensions()
-    love.graphics.translate(dims.status_left, 0)
 
     for n=1, 4 do
-        local cx, cy, cw, ch = card_coords(n-1, 4)
+        local cx, cy, cw, ch = hand_coords(n)
         love.graphics.push()
-        love.graphics.translate((n-1)*(cw+dims.spacing), cy)
-        draw_card(hand[n])
+        love.graphics.translate(cx, cy)
+
+        if n == skip then draw_card(nil)
+        else draw_card(hand[n]) end
         love.graphics.pop()
     end
 
@@ -66,6 +100,13 @@ function card_quad(x, y)
     return love.graphics.newQuad(x*w, y*h, w, h, CardsPng:getWidth(), CardsPng:getHeight())
 end
 
+function hand_coords(n)
+    local dims = card_dimensions()
+    local x,y = card_coords(n-1, 4)
+    x = x + dims.status_left - dims.left
+    return x, y, dims.width, dims.height
+end
+
 function card_coords(x, y)
     local dims = card_dimensions()
 
@@ -77,10 +118,16 @@ end
 function pixel_to_card(x, y)
     local dims = card_dimensions()
 
-    x = x - dims.left + dims.spacing/2
-    y = y - dims.top + dims.spacing/2
-
-    return math.floor(x / (dims.width+dims.spacing)), math.floor(y / (dims.height+dims.spacing))
+    -- First, are we in the board or the hand or neither?
+    if x >= dims.left and x <= dims.right then -- Board!
+        x = x - dims.left + dims.spacing/2
+        y = y - dims.top + dims.spacing/2
+        return 'board', math.floor(x / (dims.width+dims.spacing)), math.floor(y / (dims.height+dims.spacing))
+    elseif (x >= dims.status_left and x <= dims.status_right and
+            y >= dims.hand_top and y <= dims.hand_bottom) then -- Hand
+        x = x - dims.status_left + dims.spacing/2
+        return 'hand', math.floor(x / (dims.width+dims.spacing))
+    end
 end
 
 function card_dimensions()
@@ -105,8 +152,16 @@ function card_dimensions()
     local scaled_card_height = math.floor(190 * scale)
 
     local top = math.floor((orig_h - 9*scaled_card_height - 8*spacing) / 2)
+    local bottom = orig_h - top
+
     local left = math.floor((orig_w - 16*scaled_card_width - 14*spacing - h_divide)/2)
+    local right = left + scaled_card_width * 12 + spacing * 11 -- Right edge of *board*
+
     local status_left = left + 12*scaled_card_width + 11*spacing + h_divide
+    local status_right = status_left + scaled_card_width * 4 + spacing * 3
+
+    local hand_top = top + scaled_card_height*4 + spacing*4
+    local hand_bottom = top + scaled_card_height*5 + spacing*4
 
     return {
         width = scaled_card_width,
@@ -114,6 +169,10 @@ function card_dimensions()
         scale = scale,
         top = top,
         left = left,
+        right = right,
         status_left = status_left,
+        status_right = status_right,
+        hand_top = hand_top,
+        hand_bottom = hand_bottom,
         spacing = spacing }
 end

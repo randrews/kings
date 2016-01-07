@@ -35,6 +35,13 @@ function love.mousereleased(x, y, button)
 
         -- This ends a drag:
         if drag_state.dragging then
+            local drop = closest_drop(game, drag_state)
+
+            if drop then
+                local card = drag_state.target_card
+                place_card(game, card, dragged_value(game), drop.x, drop.y)
+            end
+
             drag_state.dragging = false
             drag_state.target_card = nil
         end

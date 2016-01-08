@@ -1,4 +1,53 @@
-function shuffle() -- return a shuffled deck
+Game = class('Game')
+
+function Game:initialize(layout)
+    -- Deck is a fresh shuffled deck, game.deck is that same deck
+    -- minus kings
+    local deck = self:shuffle()
+    self.deck = {}
+
+    while #deck > 0 do
+        local card = table.remove(deck, 1)
+        if card:sub(2,2) ~= 'k' then
+            table.insert(self.deck, card)
+        end
+    end
+
+    self.board = {}
+    for y=0,8 do self.board[y] = {} end
+
+    if layout == 'random' then -- Place kings randomly on the board
+        local kings = {'hk', 'dk', 'ck', 'sk'}
+        while #kings > 0 do
+            local x, y = math.random(0,11), math.random(0,8)
+            if not self.board[y][x] then
+                self.board[y][x] = table.remove(kings, 1)
+            end
+        end
+    elseif layout == 'corners' then -- Kings in the corners
+        self.board[0][0] = 'hk'
+        self.board[0][11] = 'ck'
+        self.board[8][0] = 'sk'
+        self.board[8][11] = 'dk'
+    else -- Kings in the center, the default
+        self.board[4][4] = 'hk'
+        self.board[4][5] = 'sk'
+        self.board[4][6] = 'ck'
+        self.board[4][7] = 'dk'
+    end
+
+    self.hand = {}
+
+    for n=1,4 do self:draw() end
+
+    return self
+end
+
+function Game:draw()
+    table.insert(self.hand, table.remove(self.deck, 1))
+end
+
+function Game:shuffle() -- return a shuffled deck
     local cards = {}
     local deck = {}
 
@@ -19,65 +68,23 @@ function shuffle() -- return a shuffled deck
     return deck
 end
 
-function start_game(layout)
-    local game = {}
-
-    -- Deck is a fresh shuffled deck, game.deck is that same deck
-    -- minus kings
-    local deck = shuffle()
-    game.deck = {}
-
-    while #deck > 0 do
-        local card = table.remove(deck, 1)
-        if card:sub(2,2) ~= 'k' then
-            table.insert(game.deck, card)
-        end
+function Game:movable(type, x, y)
+    if type == 'board' then return false
+    elseif type == 'hand' then
+        return self.hand[x+1] ~= nil
     end
-
-    game.board = {}
-    for y=0,8 do game.board[y] = {} end
-
-    if layout == 'random' then -- Place kings randomly on the board
-        local kings = {'hk', 'dk', 'ck', 'sk'}
-        while #kings > 0 do
-            local x, y = math.random(0,11), math.random(0,8)
-            if not game.board[y][x] then
-                game.board[y][x] = table.remove(kings, 1)
-            end
-        end
-    elseif layout == 'corners' then -- Kings in the corners
-        game.board[0][0] = 'hk'
-        game.board[0][11] = 'ck'
-        game.board[8][0] = 'sk'
-        game.board[8][11] = 'dk'
-    else -- Kings in the center, the default
-        game.board[4][4] = 'hk'
-        game.board[4][5] = 'sk'
-        game.board[4][6] = 'ck'
-        game.board[4][7] = 'dk'
-    end
-
-    game.hand = {}
-
-    function game:draw()
-        table.insert(self.hand, table.remove(self.deck, 1))
-    end
-
-    for n=1,4 do game:draw() end
-
-    return game
 end
 
-function place_card(game, from, value, x, y) -- from is a table like {type='hand', x=1}
-    game.board[y][x] = value
+function Game:place_card(from, value, x, y) -- from is a table like {type='hand', x=1}
+    self.board[y][x] = value
     if from.type == 'hand' then
-        game.hand[from.x+1] = nil
+        self.hand[from.x+1] = nil
     else
-        game.board[from.y][from.x] = nil
+        self.board[from.y][from.x] = nil
     end
 end
 
-function legal_drops(game, card)
+function Game:legal_drops(card)
     local function matches(other)
         if not other then return true end -- everything matches an empty space
         if card:sub(1,1) == other:sub(1,1) then return true end -- same suit
@@ -86,17 +93,17 @@ function legal_drops(game, card)
     end
 
     local function adjacent(x,y)
-        if x > 0 and game.board[y][x-1] then return true end
-        if x < 11 and game.board[y][x+1] then return true end
-        if y > 0 and game.board[y-1][x] then return true end
-        if y < 8 and game.board[y+1][x] then return true end
+        if x > 0 and self.board[y][x-1] then return true end
+        if x < 11 and self.board[y][x+1] then return true end
+        if y > 0 and self.board[y-1][x] then return true end
+        if y < 8 and self.board[y+1][x] then return true end
     end
 
     local function neighbor_matches(x,y)
-        if x > 0 and not matches(game.board[y][x-1]) then return false end
-        if x < 11 and not matches(game.board[y][x+1]) then return false end
-        if y > 0 and not matches(game.board[y-1][x]) then return false end
-        if y < 8 and not matches(game.board[y+1][x]) then return false end
+        if x > 0 and not matches(self.board[y][x-1]) then return false end
+        if x < 11 and not matches(self.board[y][x+1]) then return false end
+        if y > 0 and not matches(self.board[y-1][x]) then return false end
+        if y < 8 and not matches(self.board[y+1][x]) then return false end
         return true
     end
 
@@ -104,7 +111,7 @@ function legal_drops(game, card)
 
     for y=0,8 do
         for x=0,11 do
-            if game.board[y][x] == nil and neighbor_matches(x,y) and adjacent(x,y) then
+            if self.board[y][x] == nil and neighbor_matches(x,y) and adjacent(x,y) then
                 table.insert(drops, {x=x,y=y})
             end
         end

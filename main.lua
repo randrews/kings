@@ -2,6 +2,7 @@ require 'sonnet'
 require 'util'
 require 'drawing'
 require 'game'
+require 'button'
 require 'ui'
 
 function love.load()
@@ -18,6 +19,7 @@ end
 function love.draw()
      love.graphics.setBackgroundColor(65, 134, 89)
      drawing:draw()
+     Button.draw(love.graphics)
      love.graphics.setColor(255,255,255)
      love.graphics.print(tostring(fps), 5, 5)
 end
